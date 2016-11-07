@@ -65,6 +65,7 @@ public class MapEnvironmentViewCtrl extends SimpleEnvironmentViewCtrl {
 		if (env != null) {
 			double scale = adjustTransform();
 			Map map = env.getMap();
+
 			// print connections
 			for (String loc1 : map.getLocations()) {
 				Point2D pt1 = map.getPosition(loc1);

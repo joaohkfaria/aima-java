@@ -4,13 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import aima.core.agent.Agent;
-import aima.core.environment.map.AdaptableHeuristicFunction;
-import aima.core.environment.map.ExtendableMap;
-import aima.core.environment.map.MapAgent;
-import aima.core.environment.map.MapEnvironment;
-import aima.core.environment.map.Scenario;
-import aima.core.environment.map.SimplifiedRoadMapOfAustralia;
-import aima.core.environment.map.SimplifiedRoadMapOfPartOfRomania;
+import aima.core.environment.map.*;
 import aima.core.util.CancelableThread;
 import aima.core.util.math.geom.shapes.Point2D;
 import aima.gui.fx.framework.IntegrableApplication;
@@ -39,6 +33,7 @@ public class RouteFindingAgentApp extends IntegrableApplication {
 	public static String PARAM_SCENARIO = "scenario";
 	public static String PARAM_DESTINATION_R = "destinationR";
 	public static String PARAM_DESTINATION_A = "destinationA";
+    public static String PARAM_DESTINATION_F = "destinationF";
 	public static String PARAM_SEARCH = "search";
 	public static String PARAM_Q_SEARCH_IMPL = "qsearch";
 	public static String PARAM_HEURISTIC = "heuristic";
@@ -47,6 +42,7 @@ public class RouteFindingAgentApp extends IntegrableApplication {
 	private MapEnvironmentViewCtrl envViewCtrl;
 	protected MapEnvironment env = null;
 	protected Agent agent = null;
+    private FileMap fileMap; // FileMap declaration
 
 	/** A scenario. */
 	protected Scenario scenario;
@@ -74,6 +70,9 @@ public class RouteFindingAgentApp extends IntegrableApplication {
 	 */
 	@Override
 	public Pane createRootPane() {
+        // Loading File Map
+        this.fileMap = new FileMap("mapa.txt");
+
 		BorderPane root = new BorderPane();
 
 		StackPane envView = new StackPane();
@@ -92,10 +91,14 @@ public class RouteFindingAgentApp extends IntegrableApplication {
 	}
 
 	protected Parameter[] createParameters() {
+
+        // FileMap parameters
+        String p1FileMap = fileMap.getMapName() + ", from " + fileMap.getLocations().get(0);
+
 		Parameter p1 = new Parameter(PARAM_SCENARIO, "Romania, from Arad", "Romania, from Lugoj",
-				"Romania, from Fagaras", "Australia, from Sydney", "Australia, from Random");
+				"Romania, from Fagaras", "Australia, from Sydney", "Australia, from Random", p1FileMap);
 		p1.setValueNames("Romania, from Arad", "Romania, from Lugoj", "Romania, from Fagaras", "Australia, from Sydney",
-				"Australia, from Random");
+				"Australia, from Random", p1FileMap);
 		Parameter p2r = new Parameter(PARAM_DESTINATION_R, "to Bucharest", "to Eforie", "to Neamt", "to Random");
 		p2r.setValueNames("to Bucharest", "to Eforie", "to Neamt", "to Random");
 		p2r.setDependency(PARAM_SCENARIO, "Romania, from Arad", "Romania, from Lugoj", "Romania, from Fagaras");
@@ -103,6 +106,16 @@ public class RouteFindingAgentApp extends IntegrableApplication {
 		Parameter p2a = new Parameter(PARAM_DESTINATION_A, "to Port Hedland", "to Albany", "to Melbourne", "to Random");
 		p2a.setValueNames("to Port Hedland", "to Albany", "to Melbourne", "to Random");
 		p2a.setDependency(PARAM_SCENARIO, "Australia, from Sydney", "Australia, from Random");
+
+        // Setting Parameters of File Map
+        String[] fileMapLocations = new String[fileMap.getLocations().size() - 1];
+        for (int i = 1; i < fileMap.getLocations().size(); i++) {
+            fileMapLocations[i-1] = "to " + fileMap.getLocations().get(i);
+        }
+        Parameter p2f = new Parameter(PARAM_DESTINATION_F, fileMapLocations);
+        p2f.setValueNames(fileMapLocations);
+        p2f.setDependency(PARAM_SCENARIO, p1FileMap);
+
 
 		Parameter p3 = new Parameter(PARAM_SEARCH, (Object[]) SearchFactory.getInstance().getSearchStrategyNames());
 		p3.setDefaultValueIndex(5);
@@ -112,37 +125,42 @@ public class RouteFindingAgentApp extends IntegrableApplication {
 		p5.setDependency(PARAM_SEARCH, "Greedy Best First", "A*", "Recursive Best First",
 				"Recursive Best First No Loops", "Hill Climbing");
 		p5.setDefaultValueIndex(1);
-		return new Parameter[] { p1, p2r, p2a, p3, p4, p5 };
+		return new Parameter[] { p1, p2r, p2a, p2f, p3, p4, p5 };
 	}
 
 	/** Is called after each parameter selection change. */
 	@Override
 	public void initialize() {
 		ExtendableMap map = new ExtendableMap();
-		env = new MapEnvironment(map);
 		String agentLoc = null;
 		switch (simPaneCtrl.getParamValueIndex(PARAM_SCENARIO)) {
-		case 0:
-			SimplifiedRoadMapOfPartOfRomania.initMap(map);
-			agentLoc = SimplifiedRoadMapOfPartOfRomania.ARAD;
-			break;
-		case 1:
-			SimplifiedRoadMapOfPartOfRomania.initMap(map);
-			agentLoc = SimplifiedRoadMapOfPartOfRomania.LUGOJ;
-			break;
-		case 2:
-			SimplifiedRoadMapOfPartOfRomania.initMap(map);
-			agentLoc = SimplifiedRoadMapOfPartOfRomania.FAGARAS;
-			break;
-		case 3:
-			SimplifiedRoadMapOfAustralia.initMap(map);
-			agentLoc = SimplifiedRoadMapOfAustralia.SYDNEY;
-			break;
-		case 4:
-			SimplifiedRoadMapOfAustralia.initMap(map);
-			agentLoc = map.randomlyGenerateDestination();
-			break;
+            case 0:
+                SimplifiedRoadMapOfPartOfRomania.initMap(map);
+                agentLoc = SimplifiedRoadMapOfPartOfRomania.ARAD;
+                break;
+            case 1:
+                SimplifiedRoadMapOfPartOfRomania.initMap(map);
+                agentLoc = SimplifiedRoadMapOfPartOfRomania.LUGOJ;
+                break;
+            case 2:
+                SimplifiedRoadMapOfPartOfRomania.initMap(map);
+                agentLoc = SimplifiedRoadMapOfPartOfRomania.FAGARAS;
+                break;
+            case 3:
+                SimplifiedRoadMapOfAustralia.initMap(map);
+                agentLoc = SimplifiedRoadMapOfAustralia.SYDNEY;
+                break;
+            case 4:
+                SimplifiedRoadMapOfAustralia.initMap(map);
+                agentLoc = map.randomlyGenerateDestination();
+                break;
+            // File Map case
+            case 5:
+                map = fileMap;
+                agentLoc = this.fileMap.getLocations().get(0);
+                break;
 		}
+        env = new MapEnvironment(map);
 		scenario = new Scenario(env, map, agentLoc);
 
 		destinations = new ArrayList<String>();
@@ -176,7 +194,10 @@ public class RouteFindingAgentApp extends IntegrableApplication {
 				destinations.add(map.randomlyGenerateDestination());
 				break;
 			}
-		}
+		} else if (simPaneCtrl.isParamVisible(PARAM_DESTINATION_F)) {
+            int index = simPaneCtrl.getParamValueIndex(PARAM_DESTINATION_F);
+            destinations.add(fileMap.getLocations().get(index + 1));
+        }
 
 		switch (simPaneCtrl.getParamValueIndex(PARAM_HEURISTIC)) {
 		case 0:
