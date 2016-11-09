@@ -222,6 +222,13 @@ public class RouteFindingAgentApp extends IntegrableApplication {
 	/** Starts the experiment. */
 	public void simulate() {
 		while (!env.isDone() && !CancelableThread.currIsCanceled()) {
+			List<Agent> agents = env.getAgents();
+			for (int i = 0; i < agents.size(); i++) {
+				Agent agent = agents.get(i);
+				envViewCtrl.notify("Agent[" + i + "] Travel Distance=" + env.getAgentTravelDistance(agent));
+				envViewCtrl.notify("Agent[" + i + "] Possible Next Locations=" + env.getMap().getPossibleNextLocations(env.getAgentLocation(agent)));
+			}
+
 			env.step();
 			simPaneCtrl.waitAfterStep();
 		}

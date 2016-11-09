@@ -66,6 +66,9 @@ public class NodeExpander {
 		for (NodeListener listener : nodeListeners)
 			listener.onNodeExpanded(node);
 		counter++;
+
+		System.out.print("Expanded Nodes: " + successors.size());
+
 		return successors;
 	}
 
